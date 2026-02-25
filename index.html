@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Studio Pro 🚀</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Left Side: Input & Editor */
+        .editor-side { width: 40%; background: #1e293b; padding: 20px; display: flex; flex-direction: column; border-right: 2px solid #334155; }
+        textarea { width: 100%; height: 120px; border-radius: 12px; background: #0f172a; color: #60a5fa; padding: 15px; border: 1px solid #3b82f6; outline: none; resize: none; font-size: 14px; }
+        
+        /* Buttons */
+        .btn-group { margin-top: 15px; display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-gen { background: #3b82f6; color: white; }
+        .btn-copy { background: #64748b; color: white; }
+        
+        /* Right Side: Preview */
+        .preview-side { width: 60%; background: #f8fafc; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; background: white; }
+        
+        .status-bar { padding: 10px; background: #1e293b; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #334155; }
+        .label { margin-bottom: 8px; font-size: 14px; color: #94a3b8; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="editor-side">
+        <h2>AI App Studio ⚡</h2>
+        
+        <label class="label">AI কমান্ড দিন (যেমন: একটি ক্যালকুলেটর বানাও)</label>
+        <textarea id="promptInput" placeholder="আপনার আইডিয়া বা পরিবর্তনের কথা লিখুন..."></textarea>
+        
+        <div class="btn-group">
+            <button class="btn btn-gen" onclick="generateOrUpdate()">রান / আপডেট ✨</button>
+            <button class="btn btn-copy" onclick="copyCode()">কোড কপি 📋</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <label class="label">বর্তমান সোর্স কোড (Auto-Saved):</label>
+            <textarea id="codeDisplay" readonly style="height: 300px; font-family: monospace; font-size: 12px; color: #10b981;"></textarea>
+        </div>
+    </div>
+
+    <div class="preview-side">
+        <iframe id="appPreview"></iframe>
+    </div>
+</div>
+
+<div class="status-bar" id="status">রেডি... আপনার প্রথম অ্যাপের কমান্ড লিখুন।</div>
+
+<script>
+    const API_KEY = "AIzaSyBtXLHiRrgszcaYwb22h6QL_NPZ71UFHl4"; // আপনার API Key
+    let currentCode = localStorage.getItem('last_project') || "<h1>স্বাগতম!</h1><p>বামপাশে কমান্ড লিখে আপনার অ্যাপ তৈরি শুরু করুন।</p>";
+
+    // শুরুতে আগের কোড লোড করা
+    window.onload = () => {
+        updateUI(currentCode);
+    };
+
+    async function generateOrUpdate() {
+        const prompt = document.getElementById('promptInput').value;
+        const status = document.getElementById('status');
+        if (!prompt) return alert("কিছু লিখুন!");
+
+        status.innerText = "AI চিন্তা করছে এবং কোড আপডেট করছে...";
+
+        try {
+            const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
+            // AI-কে বলা হচ্ছে আগের কোডটির সাথে নতুন কমান্ড যোগ করতে
+            const contextPrompt = `Current Code: ${currentCode}\n\nUser Command: ${prompt}\n\nUpdate the code based on the command. Return ONLY the full HTML code including CSS and JS. No explanations.`;
+
+            const response = await fetch(genUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: contextPrompt }] }]
+                })
+            });
+
+            const data = await response.json();
+            let newCode = data.candidates[0].content.parts[0].text.replace(/```html|```javascript|```css|```/g, "").trim();
+
+            currentCode = newCode;
+            localStorage.setItem('last_project', currentCode); // লোকাল স্টোরেজ সেভ
+            updateUI(currentCode);
+            status.innerText = "সফলভাবে আপডেট করা হয়েছে!";
+            document.getElementById('promptInput').value = ""; // ইনপুট ক্লিয়ার করা
+
+        } catch (e) {
+            status.innerText = "Error: " + e.message;
+        }
+    }
+
+    function updateUI(code) {
+        document.getElementById('codeDisplay').value = code;
+        const frame = document.getElementById('appPreview');
+        const doc = frame.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
+    }
+
+    function copyCode() {
+        const codeText = document.getElementById('codeDisplay');
+        codeText.select();
+        document.execCommand("copy");
+        alert("কোড ক্লিপবোর্ডে কপি করা হয়েছে!");
+    }
+</script>
+
+</body>
+</html>
